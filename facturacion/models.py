@@ -1,7 +1,6 @@
 from django.db import models
 from inventario.models import Producto
 
-
 class Cliente(models.Model):
     nombre = models.CharField(max_length=100)
     nit = models.CharField(max_length=20, unique=True)

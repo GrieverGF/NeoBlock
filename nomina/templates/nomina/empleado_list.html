@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">📋 Lista de Empleados</h2>
+
+    <div class="mb-3">
+        <a href="{% url 'nomina:pago_crear' %}" class="btn btn-primary">➕ Registrar Pago de Nómina</a>
+    </div>
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Usuario</th>
+                <th>Identificación</th>
+                <th>Cargo</th>
+                <th>Salario</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for empleado in empleados %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ empleado.user.username }}</td>
+                    <td>{{ empleado.identificacion }}</td>
+                    <td>{{ empleado.cargo }}</td>
+                    <td>${{ empleado.salario|floatformat:2 }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">No hay empleados registrados.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

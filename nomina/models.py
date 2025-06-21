@@ -1,23 +1,23 @@
+# nomina/models.py
 from django.db import models
-from inventario.models import Producto
-from django.contrib.auth.models import User
 
-
-class Empleado(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    cargo = models.CharField(max_length=100)
-    salario_mensual = models.DecimalField(max_digits=10, decimal_places=2)
-    fecha_ingreso = models.DateField()
+class PagoNomina(models.Model):
+    from empleado.models import Empleado  # importación retrasada para evitar ciclos
+    empleado = models.ForeignKey('empleado.Empleado', on_delete=models.CASCADE)
+    periodo = models.CharField(max_length=20)  # Ejemplo: "Junio 2025"
+    fecha_pago = models.DateField(auto_now_add=True)
+    valor = models.DecimalField(max_digits=12, decimal_places=2)
+    descripcion = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
-        return self.user.get_full_name()
+        return f"Pago {self.periodo} - {self.empleado.user.get_full_name()}"
 
-class Nomina(models.Model):
-    empleado = models.ForeignKey(Empleado, on_delete=models.CASCADE)
-    fecha_pago = models.DateField()
-    salario_bruto = models.DecimalField(max_digits=10, decimal_places=2)
-    deducciones = models.DecimalField(max_digits=10, decimal_places=2)
-    salario_neto = models.DecimalField(max_digits=10, decimal_places=2)
+# nomina/forms.py
+from django import forms
+from .models import PagoNomina
+from empleado.models import Empleado
 
-    def calcular_neto(self):
-        self.salario_neto = self.salario_bruto - self.deducciones
+class PagoNominaForm(forms.ModelForm):
+    class Meta:
+        model = PagoNomina
+        fields = ['empleado', 'periodo', 'valor', 'descripcion']

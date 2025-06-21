@@ -1,25 +1,45 @@
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
-from .models import CuentaContable
+from django.views.generic import ListView, CreateView
+from django.db import transaction
+from .models import AsientoContable
+from .forms import AsientoForm, LineaAsientoFormSet
 
-class CuentaContableListView(ListView):
-    model = CuentaContable
-    template_name = 'contabilidad/cuenta_list.html'
-    context_object_name = 'cuentas'
+class AsientoListView(ListView):
+    model = AsientoContable
+    template_name = "contabilidad/asiento_list.html"
+    context_object_name = "asientos"
 
-class CuentaContableCreateView(CreateView):
-    model = CuentaContable
-    fields = ['codigo', 'nombre', 'tipo', 'padre']
-    template_name = 'contabilidad/cuenta_form.html'
-    success_url = reverse_lazy('contabilidad:lista_cuentas')
+class AsientoCreateView(CreateView):
+    model = AsientoContable
+    form_class = AsientoForm
+    template_name = "contabilidad/asiento_form.html"
+    success_url = reverse_lazy('contabilidad:asiento_listar')  # URL de redirección tras crear
+    
+    def get_context_data(self, **kwargs):
+        """Inyecta el formset de líneas en el contexto para renderizar en la plantilla."""
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['lineas_formset'] = LineaAsientoFormSet(self.request.POST)
+        else:
+            context['lineas_formset'] = LineaAsientoFormSet()
+        return context
 
-class CuentaContableUpdateView(UpdateView):
-    model = CuentaContable
-    fields = ['codigo', 'nombre', 'tipo', 'padre']
-    template_name = 'contabilidad/cuenta_form.html'
-    success_url = reverse_lazy('contabilidad:lista_cuentas')
-
-class CuentaContableDeleteView(DeleteView):
-    model = CuentaContable
-    template_name = 'contabilidad/cuenta_confirm_delete.html'
-    success_url = reverse_lazy('contabilidad:lista_cuentas')
+    def form_valid(self, form):
+        """Guarda el nuevo asiento y sus líneas si todas las formas son válidas."""
+        context = self.get_context_data()
+        lineas_formset = context['lineas_formset']
+        if lineas_formset.is_valid():
+            # Asignar el usuario que crea el asiento antes de guardar
+            asiento = form.save(commit=False)
+            asiento.creado_por = self.request.user
+            # Usar una transacción atómica para guardar asiento y líneas juntos
+            with transaction.atomic():
+                asiento.save()
+                # Asignar el asiento a cada línea y guardar las líneas
+                lineas_formset.instance = asiento
+                lineas_formset.save()
+            return redirect(self.success_url)
+        else:
+            # Si el formset de líneas no es válido, re-renderizar el formulario con errores
+            return self.render_to_response(self.get_context_data(form=form))
